@@ -128,7 +128,7 @@ class HBNBCommand(cmd.Cmd):
                 comm_1 = comm[i].split('=')
                 key = comm_1[0]
                 value = comm_1[1]
-                value = value.replace(' ', '_')
+                value = value.replace('_', ' ')
                 value = value.replace('\"', '')
                 if type(value) in (str, int, float):
                     setattr(new_instance, key, value)
