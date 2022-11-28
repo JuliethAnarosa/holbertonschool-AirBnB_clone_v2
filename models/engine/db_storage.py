@@ -38,7 +38,7 @@ class DBStorage():
                                       os.environ.get('HBNB_MYSQL_DB')),
                                       pool_pre_ping=True)
         if os.environ.get('HBNB_ENV') == 'test':
-            self.__session.drop_all(self.__engine)
+            self.__session.drop_all(self.__engine, checkfirst=True)
 
     def all(self, cls=None):
         """
