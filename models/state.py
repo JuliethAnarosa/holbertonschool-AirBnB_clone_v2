@@ -1,23 +1,35 @@
 #!/usr/bin/python3
-""" City Module for HBNB project """
+""" State Module for HBNB project """
 import models
 from models.base_model import BaseModel, Base
-from models.place import Place
+from models.city import City
 import sqlalchemy
 from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 
-class City(BaseModel, Base):
-    """ The city class, contains state ID and name """
-    __tablename__ = 'cities'
+class State(BaseModel, Base):
+    """ State class """
+    __tablename__ = "states"
     name = Column(String(128), nullable=False)
-    state_id = Column(String(60), ForeignKey('states.id'), nullable=False)
-    places = relationship("Place", backref="cities")
+    cities = relationship("City", backref="state")
 
     def __init__(self, *args, **kwargs):
         """
-            Init for inherited
+        init inherited
         """
         super().__init__(*args, **kwargs)
+
+    if models.storage_type != "db":
+        @property
+        def cities(self):
+            """getter for cities that return
+            a list of city instance equale to
+            curent state id
+            """
+            list_city = []
+            all_inst_c = models.storage.all(City)
+            for value in all_inst_c.values():
+                if value.state_id == self.id:
+                    list_city.append(value)
+            return 
