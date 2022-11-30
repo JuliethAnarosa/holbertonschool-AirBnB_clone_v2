@@ -15,8 +15,7 @@ class State(BaseModel, Base):
     if storecondition == "db":
         __tablename__ = "states"
         name = Column(String(128), nullable=False)
-        cities = relationship("City", backref="states", cascade="all, delete",
-                              passive_deletes=True)
+        cities = relationship("City", backref="states")
     else:
         name = ""
 
@@ -26,8 +25,8 @@ class State(BaseModel, Base):
             """Returns a list of City instances with state_id equals
             to the current State.id"""
             citylist = []
-            allcitys = models.storage.all(City).values()
-            for city in allcitys:
+            allcitys = models.storage.all(City)
+            for value in allcitys.values():
                 if city.state_id == self.id:
-                    citylist.append(city)
+                    citylist.append(value))
             return citylist
