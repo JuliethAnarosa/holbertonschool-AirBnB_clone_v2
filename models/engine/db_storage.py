@@ -1,96 +1,76 @@
 #!/usr/bin/python3
-"""
-model to mange DB storage using sqlAlchemy
-"""
-import models
-from models.amenity import Amenity
-from models.base_model import BaseModel, Base
-from models.city import City
-from models.place import Place
-from models.review import Review
-from models.state import State
-from models.user import User
-import sqlalchemy
+# This is the file storage class for AirBnB
+
+import os
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.scoping import scoped_session
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-from os import getenv
+from models import *
 
 
 class DBStorage:
-    """
-        This class manage DB storage for AirBnb
-        Clone using sqlAlchemy
-    """
     __engine = None
     __session = None
-    all_classes = ["State", "City", "User", "Place", "Review"]
+    valid_classes = ["User", "State", "City", "Amenity", "Place", "Review"]
 
     def __init__(self):
-        """
-            Init __engine based on the Enviroment
-        """
-        HBNB_MYSQL_USER = getenv('HBNB_MYSQL_USER')
-        HBNB_MYSQL_PWD = getenv('HBNB_MYSQL_PWD')
-        HBNB_MYSQL_HOST = getenv('HBNB_MYSQL_HOST')
-        HBNB_MYSQL_DB = getenv('HBNB_MYSQL_DB')
-        HBNB_ENV = getenv('HBNB_ENV')
-        exec_db = 'mysql+mysqldb://{}:{}@{}/{}'.format(
-                                            HBNB_MYSQL_USER,
-                                            HBNB_MYSQL_PWD,
-                                            HBNB_MYSQL_HOST,
-                                            HBNB_MYSQL_DB
-                                                )
-        self.__engine = create_engine(exec_db, pool_pre_ping=True)
-        if HBNB_ENV == 'test':
-            Base.metadata.drop_all(self.__engine)
+        self.__engine = create_engine("mysql+mysqldb://" +
+                                      os.environ['HBNB_MYSQL_USER'] +
+                                      ":" + os.environ['HBNB_MYSQL_PWD'] +
+                                      "@" + os.environ['HBNB_MYSQL_HOST'] +
+                                      ":3306/" +
+                                      os.environ['HBNB_MYSQL_DB'])
+
+        try:
+            if os.environ['HBNB_MYSQL_ENV'] == "test":
+                Base.metadata.drop_all(self.__engine)
+        except KeyError:
+            pass
 
     def all(self, cls=None):
-        """ query on the current database session (self.__session)
-        all objects depending of the class name"""
-        d = {}
+        storage = {}
         if cls is None:
-            for c in self.all_classes:
-                c = eval(c)
-                for instance in self.__session.query(c).all():
-                    key = instance.__class__.__name__ + '.' + instance.id
-                    d[key] = instance
+            for cls_name in self.valid_classes:
+                for instance in self.__session.query(eval(cls_name)):
+                    storage[instance.id] = instance
         else:
-            for instance in self.__session.query(cls).all():
-                key = instance.__class__.__name__ + '.' + instance.id
-                d[key] = instance
-        return d
+            if cls not in self.valid_classes:
+                return
+            for instance in self.__session.query(eval(cls)):
+                storage[instance.id] = instance
+
+        return storage
 
     def new(self, obj):
-        """
-            Creating new instance in db storage
-        """
         self.__session.add(obj)
 
     def save(self):
-        """
-            save to the db storage
-        """
-        self.__session.commit()
+        try:
+            self.__session.commit()
+        except:
+            self.__session.rollback()
+            raise
+        finally:
+            self.__session.close()
 
-    def delete(self, obj=None):
-        """
-            Delete obj from db storage
-        """
-        if obj is not None:
-            self.__session.delete(obj)
+    def update(self, cls, obj_id, key, new_value):
+        res = self.__session.query(eval(cls)).filter(eval(cls).id == obj_id)
+
+        if res.count() == 0:
+            return 0
+
+        res.update({key: (new_value)})
+        return 1
 
     def reload(self):
-        """
-            create table in database
-        """
         Base.metadata.create_all(self.__engine)
-        session_db = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(session_db)
-        self.__session = Session()
+        self.__session = scoped_session(sessionmaker(bind=self.__engine))
+
+    def delete(self, obj=None):
+        if obj is None:
+            return
+
+        self.__session.delete(obj)
 
     def close(self):
-        """
-            Closing the session
-        """
-        self.reload()
-        self.__session.close()
+        self.__session.remove()
